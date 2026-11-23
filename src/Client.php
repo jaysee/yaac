@@ -242,10 +242,17 @@ class Client
 
     /**
      * Return a certificate
+     *
+     * Pass a PEM encoded private key (RSA or EC) to have it certified instead of a new
+     * RSA key of `key_length` bits. The account key is not affected and stays RSA.
      */
-    public function getCertificate(Order $order): Certificate
+    public function getCertificate(Order $order, ?string $privateKey = null): Certificate
     {
-        $privateKey = Helper::getNewKey($this->getOption('key_length', 4096));
+        if ($privateKey === null) {
+            $privateKey = Helper::getNewKey($this->getOption('key_length', 4096));
+        } elseif (openssl_pkey_get_private($privateKey) === false) {
+            throw new \InvalidArgumentException('The private key must be a PEM encoded private key');
+        }
         $csr = Helper::getCsr($order->getDomains(), $privateKey);
         $der = Helper::toDer($csr);
 
